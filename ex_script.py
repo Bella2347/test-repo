@@ -10,3 +10,5 @@ def print_turtles(turtles: int = 1) -> None:
 
 
 print_turtles(10)
+
+print("Doggie")
