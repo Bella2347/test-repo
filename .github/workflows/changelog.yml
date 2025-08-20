@@ -79,6 +79,9 @@ jobs:
             {print > "old_entries.md"}
           ' changelog.md
 
+          # Make sure old_entries.md exists
+          touch old_entries.md
+
           # Rebuild file: header + new entry + old entries
           cat header.md new_entry.md old_entries.md > updated_changelog.md
           mv updated_changelog.md changelog.md
