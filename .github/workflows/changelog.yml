@@ -23,14 +23,14 @@ jobs:
       - name: Extract "What's Changed" from PR
         id: extract_changes
         run: |
+          # Extract lines under "## Changes" section
           CHANGES=$(echo "${{ github.event.pull_request.body }}" | awk '/## Changes/{flag=1;next}/##/{flag=0}flag')
           echo "Extracted Changes:"
           echo "$CHANGES"
-          {
-            echo "changes<<EOF"
-            echo "$CHANGES"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
+
+          # Encode to base64 to safely pass multi-line text with special characters
+          CHANGES_B64=$(echo "$CHANGES" | base64)
+          echo "changes_b64=$CHANGES_B64" >> $GITHUB_OUTPUT
 
       - name: Detect if PR has Issue label
         id: detect_issue
@@ -43,7 +43,9 @@ jobs:
           fi
 
       - name: Print extracted changes
-        run: echo "${{ steps.extract_changes.outputs.changes }}"
+        run: |
+          echo "Decoded changes:"
+          echo "${{ steps.extract_changes.outputs.changes_b64 }}" | base64 --decode
 
       - name: Generate EventLog
         env:
@@ -53,11 +55,12 @@ jobs:
           MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
           MERGED_AT: ${{ github.event.pull_request.merged_at }}
         run: |
-          CHANGES="${{ steps.extract_changes.outputs.changes }}"
+          # Decode base64 changes
+          CHANGES=$(echo "${{ steps.extract_changes.outputs.changes_b64 }}" | base64 --decode)
           PREFIX="${{ steps.detect_issue.outputs.prefix }}"
           GITHUB_REPO_URL="https://github.com/Bella2347/test-repo"
 
-          # New entry text
+          # Create new changelog entry
           {
             echo "## ${PREFIX}[PR #${PR_NUMBER}](${GITHUB_REPO_URL}/pull/${PR_NUMBER}) - ${PR_TITLE}"
             echo ""
@@ -71,7 +74,7 @@ jobs:
             echo ""
           } > new_entry.md
 
-          # Split file into header + entries
+          # Split existing changelog into header + old entries
           awk '
             NR==1 {header=1}
             /^# Events/ {print > "header.md"; getline; print > "header.md"; header=0; next}
@@ -82,13 +85,13 @@ jobs:
           # Make sure old_entries.md exists
           touch old_entries.md
 
-          # Rebuild file: header + new entry + old entries
+          # Rebuild changelog: header + new entry + old entries
           cat header.md new_entry.md old_entries.md > updated_changelog.md
           mv updated_changelog.md changelog.md
 
-          # Commit and push
+          # Commit and push changes
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add changelog.md
-          git commit -m "chore: update changelog for PR #${PR_NUMBER}"
+          git commit -m "chore: update changelog for PR #${PR_NUMBER}" || echo "No changes to commit"
           git push origin HEAD
