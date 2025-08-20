@@ -2,6 +2,7 @@ print("Hello Cats")
 print("First branch")
 print("Second branch")
 print("Hippopotamus")
+print("Bunny")
 
 
 def print_turtles(turtles: int = 1) -> None:
