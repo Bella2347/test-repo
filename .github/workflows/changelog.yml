@@ -20,21 +20,30 @@ jobs:
       - name: Install auto-changelog
         run: npm install -g auto-changelog
 
+      - name: Get raw PR body
+        id: get_body
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            return github.event.pull_request.body
+
       - name: Debug PR body
         run: |
           echo "PR Body Start"
-          echo "${{ github.event.pull_request.body }}"
+          echo "${{ steps.get_body.outputs.result }}"
           echo "PR Body End"
 
       - name: Extract "What's Changed" from PR
         id: extract_changes
         run: |
           # Extract lines under "## Changes" until "### Config-slicer"
+          PR_BODY="${{ steps.get_body.outputs.result }}"
           CHANGES=$(awk '
             /^## Changes/ {flag=1; next}
             /^### Config-slicer/ {flag=0}
             flag {print}
-            ' <<< "${{ github.event.pull_request.body }}")
+            ' <<< "$PR_BODY")
 
           echo "Extracted Changes:"
           echo "$CHANGES"
