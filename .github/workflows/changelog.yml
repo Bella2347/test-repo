@@ -23,22 +23,18 @@ jobs:
       - name: Debug PR body
         run: |
           echo "PR Body Start"
-          PR_BODY=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER} | jq -r .body)
-          echo "$PR_BODY"
+          echo "${{ github.event.pull_request.body }}"
           echo "PR Body End"
 
       - name: Extract "What's Changed" from PR
         id: extract_changes
         run: |
           # Extract lines under "## Changes" until "### Config-slicer"
-          PR_BODY=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-          https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER} | jq -r .body)
           CHANGES=$(awk '
             /^## Changes/ {flag=1; next}
             /^### Config-slicer/ {flag=0}
             flag {print}
-            ' <<< "$PR_BODY")
+            ' <<< "${{ github.event.pull_request.body }}")
 
           echo "Extracted Changes:"
           echo "$CHANGES"
