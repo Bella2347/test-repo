@@ -27,7 +27,7 @@ Update with all significant changes and issues. When changes are introduced thro
 *Describe the change*
 
 # Events
-# Events
+
 ## [PR #5](https://github.com/Bella2347/test-repo/pull/5) - Print Doggie
 
 - Merged by: Bella2347
@@ -36,11 +36,9 @@ Update with all significant changes and issues. When changes are introduced thro
 
 ### What's Changed
 
-
 Print 
 
 _Text_
-
 
 ## [PR #4](https://github.com/Bella2347/test-repo/pull/4) - Added function print_turtles()
 
@@ -50,11 +48,9 @@ _Text_
 
 ### What's Changed
 
-
 Added 
 
 Second line
-
 
 ## [PR #3](https://github.com/Bella2347/test-repo/pull/3) - Added print Hippo
 
@@ -64,7 +60,4 @@ Second line
 
 ### What's Changed
 
-
 Added print 
-
-

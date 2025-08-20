@@ -66,6 +66,7 @@ jobs:
 
           # Create new changelog entry
           {
+            echo ""
             echo "## ${PREFIX}[PR #${PR_NUMBER}](${GITHUB_REPO_URL}/pull/${PR_NUMBER}) - ${PR_TITLE}"
             echo ""
             echo "- Merged by: ${MERGED_BY}"
@@ -73,9 +74,7 @@ jobs:
             echo "- Author: ${PR_AUTHOR}"
             echo ""
             echo "### What's Changed"
-            echo ""
             printf "%s\n" "$CHANGES"
-            echo ""
           } > new_entry.md
 
           # Split existing changelog into header + old entries
