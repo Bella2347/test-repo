@@ -1,0 +1,91 @@
+name: Generate EventLog
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  generate-changelog:
+    # Run only if PR is merged into main
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install auto-changelog
+        run: npm install -g auto-changelog
+
+      - name: Extract "What's Changed" from PR
+        id: extract_changes
+        run: |
+          CHANGES=$(echo "${{ github.event.pull_request.body }}" | awk '/## Changes/{flag=1;next}/##/{flag=0}flag')
+          echo "Extracted Changes:"
+          echo "$CHANGES"
+          {
+            echo "changes<<EOF"
+            echo "$CHANGES"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Detect if PR has Issue label
+        id: detect_issue
+        run: |
+          HAS_ISSUE_LABEL=$(echo '${{ toJson(github.event.pull_request.labels) }}' | jq -r '.[] | select(.name=="Issue") | .name' | wc -l)
+          if [ "$HAS_ISSUE_LABEL" -gt 0 ]; then
+            echo "prefix=[ISSUE ] " >> $GITHUB_OUTPUT
+          else
+            echo "prefix=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Print extracted changes
+        run: echo "${{ steps.extract_changes.outputs.changes }}"
+
+      - name: Generate EventLog
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+          MERGED_AT: ${{ github.event.pull_request.merged_at }}
+        run: |
+          CHANGES="${{ steps.extract_changes.outputs.changes }}"
+          PREFIX="${{ steps.detect_issue.outputs.prefix }}"
+          GITHUB_REPO_URL="https://github.com/Bella2347/test-repo"
+
+          # New entry text
+          {
+            echo "## ${PREFIX}[PR #${PR_NUMBER}](${GITHUB_REPO_URL}/pull/${PR_NUMBER}) - ${PR_TITLE}"
+            echo ""
+            echo "- Merged by: ${MERGED_BY}"
+            echo "- Date: ${MERGED_AT}"
+            echo "- Author: ${PR_AUTHOR}"
+            echo ""
+            echo "### What's Changed"
+            echo ""
+            echo "$CHANGES"
+            echo ""
+          } > new_entry.md
+
+          # Split file into header + entries
+          awk '
+            NR==1 {header=1}
+            /^# Events/ {print > "header.md"; getline; print > "header.md"; header=0; next}
+            header {print > "header.md"; next}
+            {print > "old_entries.md"}
+          ' changelog.md
+
+          # Rebuild file: header + new entry + old entries
+          cat header.md new_entry.md old_entries.md > updated_changelog.md
+          mv updated_changelog.md changelog.md
+
+          # Commit and push
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add changelog.md
+          git commit -m "chore: update changelog for PR #${PR_NUMBER}"
+          git push origin HEAD
