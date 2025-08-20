@@ -27,3 +27,16 @@ Update with all significant changes and issues. When changes are introduced thro
 *Describe the change*
 
 # Events
+# Events
+## [PR #3](https://github.com/Bella2347/test-repo/pull/3) - Added print Hippo
+
+- Merged by: Bella2347
+- Date: 2025-08-20T11:36:28Z
+- Author: Bella2347
+
+### What's Changed
+
+
+Added print 
+
+
