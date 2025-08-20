@@ -20,6 +20,12 @@ jobs:
       - name: Install auto-changelog
         run: npm install -g auto-changelog
 
+      - name: Debug PR body
+        run: |
+          echo "PR Body Start"
+          echo "${{ github.event.pull_request.body }}"
+          echo "PR Body End"
+
       - name: Extract "What's Changed" from PR
         id: extract_changes
         run: |
@@ -28,7 +34,7 @@ jobs:
             /^## Changes/ {flag=1; next}
             /^### Config-slicer/ {flag=0}
             flag {print}
-          ' <<< "${{ github.event.pull_request.body }}")
+            ' <<< "${{ github.event.pull_request.body }}")
 
           echo "Extracted Changes:"
           echo "$CHANGES"
@@ -65,19 +71,18 @@ jobs:
           PREFIX="${{ steps.detect_issue.outputs.prefix }}"
           GITHUB_REPO_URL="https://github.com/Bella2347/test-repo"
 
-          # Create new changelog entry using a quoted here-document
-          cat << EOF > new_entry.md
-## ${PREFIX}[PR #${PR_NUMBER}](${GITHUB_REPO_URL}/pull/${PR_NUMBER})
-
-- Merged by: ${MERGED_BY}
-- Date: ${MERGED_AT}
-- Author: ${PR_AUTHOR}
-
-### What's Changed
-
-$CHANGES
-
-EOF
+          # Create new changelog entry
+          {
+            echo ""
+            echo "## ${PREFIX}[PR #${PR_NUMBER}](${GITHUB_REPO_URL}/pull/${PR_NUMBER}) - ${PR_TITLE}"
+            echo ""
+            echo "- Merged by: ${MERGED_BY}"
+            echo "- Date: ${MERGED_AT}"
+            echo "- Author: ${PR_AUTHOR}"
+            echo ""
+            echo "### What's Changed"
+            printf "%s\n" "$CHANGES"
+          } > new_entry.md
 
           # Split existing changelog into header + old entries
           awk '
