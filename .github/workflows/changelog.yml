@@ -17,19 +17,32 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install auto-changelog
-        run: npm install -g auto-changelog
-
-      - name: Extract "What's Changed" from PR
-        id: extract_changes
+      - name: Fetch PR body via GitHub API
+        id: fetch_pr_body
         run: |
-          CHANGES=$(echo "${{ github.event.pull_request.body }}" | awk '/## Changes/{flag=1;next}/### Config-slicer/{flag=0}flag')
-          echo "Extracted Changes:"
-          echo "$CHANGES"
-          
-          echo "changes<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+            PR_BODY=$(curl -s \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }} \
+            | jq -r '.body')
+
+            echo "PR body fetched:"
+            echo "$PR_BODY"
+
+            # Extract lines under "## Changes" until "### Config-slicer"
+            CHANGES=$(awk '
+            /^## Changes/ {flag=1; next}
+            /^### Config-slicer/ {flag=0}
+            flag {print}
+            ' <<< "$PR_BODY")
+
+            echo "Extracted Changes:"
+            echo "$CHANGES"
+
+            # Safely set multi-line output for use in later steps
+            echo "changes<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Print extracted changes
         run: |
