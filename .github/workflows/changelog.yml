@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Fetch PR body via GitHub API
+      - name: Fetch and extract PR changes
         id: fetch_pr_body
         run: |
           PR_BODY=$(curl -s \
@@ -26,28 +26,21 @@ jobs:
             https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }} \
             | jq -r '.body')
 
-          echo "PR body fetched:"
-          echo "$PR_BODY"
+          echo "PR body fetched."
 
           # Extract lines under "## Changes" until "### Config-slicer"
-          CHANGES=$(awk '
+          awk '
             /^## Changes/ {flag=1; next}
             /^### Config-slicer/ {flag=0}
             flag {print}
-          ' <<< "$PR_BODY")
+          ' <<< "$PR_BODY" > changes.txt
 
-          echo "Extracted Changes:"
-          echo "$CHANGES"
+          echo "Extracted changes written to changes.txt"
 
-          # Safely set multi-line output for use in later steps
+          # Store as step output (multiline safe)
           echo "changes<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGES" >> $GITHUB_OUTPUT
+          cat changes.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Print extracted changes
-        run: |
-          echo "Extracted changes:"
-          echo "${{ steps.fetch_pr_body.outputs.changes }}"
 
       - name: Detect if PR has Issue label
         id: detect_issue
@@ -67,18 +60,12 @@ jobs:
           MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
           MERGED_AT: ${{ github.event.pull_request.merged_at }}
         run: |
-          # Save PR changes to a file literally (no eval, no expansion)
-          cat > changes.txt <<'EOF'
-          ${{ steps.fetch_pr_body.outputs.changes }}
-          EOF
-
           CHANGES=$(cat changes.txt)
           PREFIX="${{ steps.detect_issue.outputs.prefix }}"
-          GITHUB_REPO_URL="https://github.com/Bella2347/test-repo"
+          GITHUB_REPO_URL="https://github.com/${{ github.repository }}"
 
           # Create new changelog entry
           {
-            echo ""
             echo "## ${PREFIX}[PR #${PR_NUMBER}](${GITHUB_REPO_URL}/pull/${PR_NUMBER}) - ${PR_TITLE}"
             echo ""
             echo "- Merged by: ${MERGED_BY}"
@@ -101,8 +88,7 @@ jobs:
           touch old_entries.md
 
           # Rebuild changelog: header + new entry + old entries
-          cat header.md new_entry.md old_entries.md > updated_changelog.md
-          mv updated_changelog.md changelog.md
+          cat header.md new_entry.md old_entries.md > changelog.md
 
           # Commit and push changes
           git config user.name "github-actions[bot]"
