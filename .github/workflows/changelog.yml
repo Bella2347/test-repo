@@ -47,7 +47,7 @@ jobs:
       - name: Print extracted changes
         run: |
           echo "Extracted changes:"
-          echo "${{ steps.extract_changes.outputs.changes }}"
+          echo "${{ steps.fetch_pr_body.outputs.changes }}"
 
       - name: Detect if PR has Issue label
         id: detect_issue
@@ -67,7 +67,7 @@ jobs:
           MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
           MERGED_AT: ${{ github.event.pull_request.merged_at }}
         run: |
-          CHANGES="${{ steps.extract_changes.outputs.changes }}"
+          CHANGES="${{ steps.fetch_pr_body.outputs.changes }}"
           PREFIX="${{ steps.detect_issue.outputs.prefix }}"
           GITHUB_REPO_URL="https://github.com/Bella2347/test-repo"
 
