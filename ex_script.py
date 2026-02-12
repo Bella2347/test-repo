@@ -1,14 +1,11 @@
-import re
-
-
 # Unused import
 # Long line
 # Tabs
 # Unused variable
 # Trailing white spaces
 # Unnecessary white spaces
-def test():
-    string = "test string"
+def test(test: str) -> None:
+    string = "test string" + test
 
     if (
         "test" in string
@@ -17,3 +14,7 @@ def test():
         print(string)
 
     v = "unused variable"
+
+    string += v
+
+test(1)
