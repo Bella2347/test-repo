@@ -18,4 +18,4 @@ def test(test: str) -> None:
     string += v
 
 
-test(1)
+test("1")
