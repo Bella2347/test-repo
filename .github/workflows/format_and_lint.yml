@@ -29,10 +29,23 @@ jobs:
           pip install black ruff mypy
 
       # --------------------
+      # Determine changed Python files
+      # --------------------
+      - name: Get changed Python files
+        id: files run: |
+          FILES=$(git diff --name-only origin/main...HEAD | grep '\.py$' || true)
+          echo "changed_files=$FILES" >> $GITHUB_OUTPUT
+
+      # Skip job if no Python files changed
+      - name: Exit if no Python files
+        if: ${{ steps.files.outputs.changed_files == '' }}
+        run: echo "No Python files changed, skipping checks." && exit 0
+
+      # --------------------
       # Black (auto-format)
       # --------------------
       - name: Run Black
-        run: black .
+        run: black ${{ steps.files.outputs.changed_files }}
 
       - name: Commit Black changes
         run: |
@@ -48,7 +61,7 @@ jobs:
       # Ruff (GitHub annotations)
       # --------------------
       - name: Lint
-        run: ruff check . --output-format=github
+        run: ruff check ${{ steps.files.outputs.changed_files }} --output-format=github
 
       # --------------------
       # reviewdog setup
@@ -63,5 +76,5 @@ jobs:
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mypy . --show-error-codes --no-color-output \
+          mypy ${{ steps.files.outputs.changed_files }} --show-error-codes --no-color-output \
           | reviewdog -f=mypy -reporter=github-pr-check -level=error -fail-on-error
