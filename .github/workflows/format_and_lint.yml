@@ -1,52 +1,65 @@
-name: Python Code Quality
+name: Format, Lint & Type Check
 
 on:
   pull_request:
-    branches: [ main ]
+   branches: [ main ]
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  format-and-lint:
+  checks:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - run: pip install black ruff
+      - name: Install deps
+        run: |
+          pip install --upgrade pip
+          pip install black ruff mypy
 
-      - name: Format
+      # --------------------
+      # Black (auto-format)
+      # --------------------
+      - name: Run Black
         run: black .
 
-      - name: Commit formatting
+      - name: Commit Black changes
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-
-          if [[ `git status --porcelain` ]]; then
-          git add .
-          git commit -m "style: auto-format with black"
-          git push
+          if [[ -n $(git status --porcelain) ]]; then
+            git config --global user.name "github-actions"
+            git config --global user.email "github-actions@github.com"
+            git add .
+            git commit -m "Auto-format with Black"
+            git push
           fi
 
+      # --------------------
+      # Ruff (GitHub annotations)
+      # --------------------
       - name: Lint
         run: ruff check . --output-format=github
 
-      - name: Install type checker
-        run: pip install mypy
+      # --------------------
+      # reviewdog setup
+      # --------------------
+      - name: Setup reviewdog
+        uses: reviewdog/action-setup@v1
 
-      - name: Install tools
-        run: |
-          pip install mypy reviewdog
-
-      - name: Run mypy with annotations
+      # --------------------
+      # mypy (GitHub annotations)
+      # --------------------
+      - name: Type check
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
