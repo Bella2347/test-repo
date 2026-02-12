@@ -17,4 +17,5 @@ def test(test: str) -> None:
 
     string += v
 
+
 test(1)
