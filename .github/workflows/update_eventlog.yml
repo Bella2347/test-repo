@@ -1,0 +1,152 @@
+name: Generate EventLog
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  generate-eventlog:
+    # Run only if PR is merged into master
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Fetch and extract PR changes
+        id: fetch_pr_body
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+
+          # Fetch PR body
+          PR_BODY=$(curl -s \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}" \
+            | jq -r '.body')
+
+          echo "PR body fetched."
+
+          # Extract lines under "## Changes" until "### Config-slicer"
+          awk '
+            /^## Changes/ {flag=1; next}
+            /^### Config-slicer/ {flag=0}
+            flag {print}
+          ' <<< "$PR_BODY" > changes.txt
+
+          echo "Extracted changes written to changes.txt"
+
+          # Store as step output (multiline safe)
+          echo "changes<<EOF" >> $GITHUB_OUTPUT
+          cat changes.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Fetch PR files
+          FILES=$(curl -s \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}/files?per_page=100")
+          
+          echo "Check if requirements.txt changed"
+          if echo "$FILES" | jq -e '.[]? | select(.filename == "requirements.txt")' > /dev/null; then
+            echo "Detected requirements.txt change."
+
+            # Extract patch (diff) for requirements.txt
+            echo "$FILES" | jq -r '.[]? | select(.filename == "requirements.txt") | .patch' > req_diff.txt
+
+            # Get last req-vN tag via ls-remote (lists remote tags, no fetch/clone needed)
+            LAST_NUM=$(git ls-remote --tags origin 'refs/tags/req-v*' | \
+                       cut -d/ -f3 | \
+                       grep -v '\^{}$' | \
+                       sed 's/^req-v//' | \
+                       grep '^[0-9]\+$' | \
+                       sort -n | tail -n1 || echo 0)
+            LAST_NUM=${LAST_NUM:-8}  # Default to 8 if no tags found
+
+            NEW_NUM=$((LAST_NUM + 1))
+            NEW_TAG="req-v${NEW_NUM}"
+
+            echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+            # Configure Git identity for tagging/pushing
+            git config --local user.name "github-actions[bot]"
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
+            # Tag current HEAD (post-merge master) and push
+            git tag -a "$NEW_TAG" -m "Requirements update in PR #${PR_NUMBER}"
+            git push origin "$NEW_TAG"
+
+            echo "Tagged version $NEW_TAG"
+          else
+            echo "new_tag=" >> $GITHUB_OUTPUT
+            touch req_diff.txt  # Empty file for safety
+          fi
+
+      - name: Detect if PR has Issue label
+        id: detect_issue
+        run: |
+          HAS_ISSUE_LABEL=$(echo '${{ toJson(github.event.pull_request.labels) }}' | jq -r '.[] | select(.name=="Issue") | .name' | wc -l)
+          if [ "$HAS_ISSUE_LABEL" -gt 0 ]; then
+            echo "prefix=ISSUE " >> $GITHUB_OUTPUT
+          else
+            echo "prefix=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate EventLog
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+          MERGED_AT: ${{ github.event.pull_request.merged_at }}
+          NEW_TAG: ${{ steps.fetch_pr_body.outputs.new_tag }}
+          CHANGES: ${{ steps.fetch_pr_body.outputs.changes }}
+        run: |
+          PREFIX="${{ steps.detect_issue.outputs.prefix }}"
+          GITHUB_REPO_URL="https://github.com/${{ github.repository }}"
+
+          # Create new EventLog entry
+          {
+            echo "## ${PREFIX}[PR #${PR_NUMBER}](${GITHUB_REPO_URL}/pull/${PR_NUMBER}) - ${PR_TITLE}"
+            echo ""
+            echo "- Merged by: ${MERGED_BY}"
+            echo "- Date: ${MERGED_AT}"
+            echo "- Author: ${PR_AUTHOR}"
+            if [ -n "$NEW_TAG" ]; then
+              echo "- Requirements Update: ${NEW_TAG}"
+              echo ""
+              echo "#### Requirements Diff"
+              echo '```diff'
+              cat req_diff.txt || true 
+              echo '```'
+            fi
+            echo ""
+            echo "### What's Changed"
+            cat changes.txt
+          } > new_entry.md
+
+          # Split existing EventLog into header + old entries
+          awk '
+            NR==1 {header=1}
+            /^# Events/ {print > "header.md"; getline; print > "header.md"; header=0; next}
+            header {print > "header.md"; next}
+            {print > "old_entries.md"}
+          ' EventLog.md
+
+          # Make sure old_entries.md exists
+          touch old_entries.md
+
+          # Rebuild changelog: header + new entry + old entries
+          cat header.md new_entry.md old_entries.md > EventLog.md
+
+          # Commit and push changes
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add EventLog.md
+          git commit -m "chore: update EventLog for PR #${PR_NUMBER}" || echo "No changes to commit"
+          git push origin HEAD
