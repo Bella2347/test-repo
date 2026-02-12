@@ -1,15 +1,21 @@
-print("Hello Cats")
-print("First branch")
-print("Second branch")
-print("Hippopotamus")
-print("Bunny")
-print("Helmie")
+# Unused import
+# Long line
+# Tabs
+# Unused variable
+# Trailing white spaces
+# Unnecessary white spaces
+def test(test: str) -> None:
+    string = "test string" + test
 
-def print_turtles(turtles: int = 1) -> None:
-    for turtle in range(turtles):
-        print("Turtle")
+    if (
+        "test" in string
+        and string != "very long line to exceed maximum number of characters"
+    ):
+        print(string)
+
+    v = "unused variable"
+
+    string += v
 
 
-print_turtles(10)
-
-print("Doggie")
+test("1")
