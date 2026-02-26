@@ -46,7 +46,8 @@ jobs:
       # Auto-format
       # --------------------
       - name: Ruff format
-        run: ruff format ${{ steps.files.outputs.changed_files }}
+        run: |
+          echo "${{ steps.files.outputs.changed_files }}" | xargs -r ruff format
 
       - name: Commit Black changes
         run: |
@@ -62,7 +63,8 @@ jobs:
       # Lint
       # --------------------
       - name: Ruff check
-        run: ruff check ${{ steps.files.outputs.changed_files }} --output-format=github
+        run: |
+          echo "${{ steps.files.outputs.changed_files }}" | xargs -r ruff check --output-format=github
 
       # --------------------
       # reviewdog setup
@@ -71,11 +73,11 @@ jobs:
         uses: reviewdog/action-setup@v1
 
       # --------------------
-      # mypy (GitHub annotations)
+      # Type check
       # --------------------
-      - name: Type check
+      - name: Mypy
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mypy ${{ steps.files.outputs.changed_files }} --show-error-codes --no-color-output \
+          echo "${{ steps.files.outputs.changed_files }}" | xargs -r mypy --show-error-codes --no-color-output \
           | reviewdog -f=mypy -reporter=github-pr-check -level=error -fail-on-error
