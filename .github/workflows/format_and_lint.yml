@@ -32,7 +32,8 @@ jobs:
       # Determine changed Python files
       # --------------------
       - name: Get changed Python files
-        id: files run: |
+        id: files
+        run: |
           FILES=$(git diff --name-only origin/main...HEAD | grep '\.py$' || true)
           echo "changed_files=$FILES" >> $GITHUB_OUTPUT
 
