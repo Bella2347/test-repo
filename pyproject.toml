@@ -1,0 +1,16 @@
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "B",   # bugbear
+  "UP",  # pyupgrade
+  "TCH", # type-checking best practices
+]
+
+# Important:
+# We intentionally DO NOT include "ANN"
+# so missing type annotations do not produce warnings.

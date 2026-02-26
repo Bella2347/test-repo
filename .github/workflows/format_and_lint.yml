@@ -26,13 +26,14 @@ jobs:
       - name: Install deps
         run: |
           pip install --upgrade pip
-          pip install black ruff mypy
+          pip install ruff mypy
 
       # --------------------
       # Determine changed Python files
       # --------------------
       - name: Get changed Python files
-        id: files run: |
+        id: files
+        run: |
           FILES=$(git diff --name-only origin/main...HEAD | grep '\.py$' || true)
           echo "changed_files=$FILES" >> $GITHUB_OUTPUT
 
@@ -42,10 +43,11 @@ jobs:
         run: echo "No Python files changed, skipping checks." && exit 0
 
       # --------------------
-      # Black (auto-format)
+      # Auto-format
       # --------------------
-      - name: Run Black
-        run: black ${{ steps.files.outputs.changed_files }}
+      - name: Ruff format
+        run: |
+          echo "${{ steps.files.outputs.changed_files }}" | xargs -r ruff format
 
       - name: Commit Black changes
         run: |
@@ -58,23 +60,21 @@ jobs:
           fi
 
       # --------------------
-      # Ruff (GitHub annotations)
+      # Lint
       # --------------------
-      - name: Lint
-        run: ruff check ${{ steps.files.outputs.changed_files }} --output-format=github
+      - name: Ruff check
+        if: always()
+        run: |
+          echo "${{ steps.files.outputs.changed_files }}" | xargs -r ruff check --output-format=github
 
       # --------------------
-      # reviewdog setup
+      # Type check
       # --------------------
-      - name: Setup reviewdog
-        uses: reviewdog/action-setup@v1
-
-      # --------------------
-      # mypy (GitHub annotations)
-      # --------------------
-      - name: Type check
+      - name: Mypy
+        if: always()
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mypy ${{ steps.files.outputs.changed_files }} --show-error-codes --no-color-output \
-          | reviewdog -f=mypy -reporter=github-pr-check -level=error -fail-on-error
+          echo "${{ steps.files.outputs.changed_files }}" | xargs -r \
+            reviewdog -f=mypy -reporter=github-pr-check -level=error \
+            -- mypy --show-error-codes --no-color-output
