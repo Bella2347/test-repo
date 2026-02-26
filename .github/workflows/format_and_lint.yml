@@ -26,7 +26,7 @@ jobs:
       - name: Install Ruff
         run: |
           pip install --upgrade pip
-          pip install ruff
+          pip install ruff pyright
 
       # -----------------------------------
       # Format ONLY changed Python files
@@ -34,7 +34,7 @@ jobs:
       - name: Ruff format (changed files only)
         run: |
           git fetch origin main
-          git diff --name-only origin/main...HEAD -- '*.py' \
+          git diff --name-only $(git merge-base origin/main HEAD) -- '*.py' \
             | xargs -r ruff format
 
       - name: Commit formatting changes
@@ -55,3 +55,9 @@ jobs:
           git fetch origin main
           git diff --name-only $(git merge-base origin/main HEAD) -- '*.py' \
             | xargs -r ruff check --output-format=github
+
+      # -----------------------------------
+      # Type checking (fail PR)
+      # -----------------------------------
+      - name: Pyright type check
+        run: pyright
