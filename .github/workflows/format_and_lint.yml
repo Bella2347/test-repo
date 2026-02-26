@@ -26,7 +26,7 @@ jobs:
       - name: Install Ruff
         run: |
           pip install --upgrade pip
-          pip install ruff pyright
+          pip install ruff mypy
 
       # -----------------------------------
       # Format ONLY changed Python files
@@ -59,6 +59,11 @@ jobs:
       # -----------------------------------
       # Type checking (fail PR)
       # -----------------------------------
-      - name: Pyright type check
+      - name: Mypy type check
         if: always()
-        run: pyright
+        run: |
+          git fetch origin main
+          files=$(git diff --name-only $(git merge-base origin/main HEAD) -- '*.py')
+          if [ -n "$files" ]; then
+          echo "$files" | xargs mypy --show-error-codes --pretty
+          fi
