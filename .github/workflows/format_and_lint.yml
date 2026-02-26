@@ -74,4 +74,4 @@ jobs:
         if: always()
         run: |
           echo "${{ steps.files.outputs.changed_files }}" | xargs -r \
-            mypy --show-error-codes --no-color-output
+            mypy --show-error-codes --no-color-output --pretty
