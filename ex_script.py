@@ -19,4 +19,4 @@ def test(test: str) -> None:
     v = "unused variable"
 
 
-test("1")
+test(1)
