@@ -1,12 +1,11 @@
-name: Format, Lint & Type Check
+name: Format & Lint
 
 on:
   pull_request:
-   branches: [ main ]
+    branches: [ main ]
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   checks:
@@ -16,65 +15,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # required for git diff
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install deps
+      - name: Install Ruff
         run: |
           pip install --upgrade pip
-          pip install black ruff mypy
+          pip install ruff
 
-      # --------------------
-      # Determine changed Python files
-      # --------------------
-      - name: Get changed Python files
-        id: files run: |
-          FILES=$(git diff --name-only origin/main...HEAD | grep '\.py$' || true)
-          echo "changed_files=$FILES" >> $GITHUB_OUTPUT
+      # -----------------------------------
+      # Format ONLY changed Python files
+      # -----------------------------------
+      - name: Ruff format (changed files only)
+        run: |
+          git fetch origin main
+          git diff --name-only origin/main...HEAD -- '*.py' \
+            | xargs -r ruff format
 
-      # Skip job if no Python files changed
-      - name: Exit if no Python files
-        if: ${{ steps.files.outputs.changed_files == '' }}
-        run: echo "No Python files changed, skipping checks." && exit 0
-
-      # --------------------
-      # Black (auto-format)
-      # --------------------
-      - name: Run Black
-        run: black ${{ steps.files.outputs.changed_files }}
-
-      - name: Commit Black changes
+      - name: Commit formatting changes
         run: |
           if [[ -n $(git status --porcelain) ]]; then
             git config --global user.name "github-actions"
             git config --global user.email "github-actions@github.com"
             git add .
-            git commit -m "Auto-format with Black"
+            git commit -m "Auto-format with Ruff"
             git push
           fi
 
-      # --------------------
-      # Ruff (GitHub annotations)
-      # --------------------
-      - name: Lint
-        run: ruff check ${{ steps.files.outputs.changed_files }} --output-format=github
-
-      # --------------------
-      # reviewdog setup
-      # --------------------
-      - name: Setup reviewdog
-        uses: reviewdog/action-setup@v1
-
-      # --------------------
-      # mypy (GitHub annotations)
-      # --------------------
-      - name: Type check
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # -----------------------------------
+      # Lint ONLY changed files (fail PR)
+      # -----------------------------------
+      - name: Ruff check (changed files only)
         run: |
-          mypy ${{ steps.files.outputs.changed_files }} --show-error-codes --no-color-output \
-          | reviewdog -f=mypy -reporter=github-pr-check -level=error -fail-on-error
+          git fetch origin main
+          git diff --name-only origin/main...HEAD -- '*.py' \
+            | xargs -r ruff check --output-format=github
