@@ -65,5 +65,5 @@ jobs:
           git fetch origin main
           files=$(git diff --name-only $(git merge-base origin/main HEAD) -- '*.py')
           if [ -n "$files" ]; then
-          echo "$files" | xargs mypy --show-error-codes --pretty
+          echo "$files" | xargs mypy --show-error-codes --no-color-output
           fi
