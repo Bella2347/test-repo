@@ -60,4 +60,5 @@ jobs:
       # Type checking (fail PR)
       # -----------------------------------
       - name: Pyright type check
+        if: always()
         run: pyright
