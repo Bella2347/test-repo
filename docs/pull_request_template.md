@@ -29,7 +29,7 @@ Configuration backed up with config-slicer: */opt/cmd/config_slices/file_name*
 ## Before review
 
 - [ ] Add label indicating size: *Tiny/Small/Medium/Large* (add *Issue* when applicable)
-- [ ] Configuration backed up with config-slicer (if needed)
+- [ ] files in config/udf_names are updated
 - [ ] Requirements checked (created/updated if needed)
 - [ ] Testcases checked (created/updated if needed)
 - [ ] Tests (regression and acceptance) passed on test server

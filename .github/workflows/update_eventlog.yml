@@ -5,8 +5,8 @@ on:
 
 jobs:
   generate-eventlog:
-    # Run only if PR is merged into master
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'master'
+    # Run only if PR is merged into main
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -77,7 +77,7 @@ jobs:
             git config --local user.name "github-actions[bot]"
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
 
-            # Tag current HEAD (post-merge master) and push
+            # Tag current HEAD (post-merge main) and push
             git tag -a "$NEW_TAG" -m "Requirements update in PR #${PR_NUMBER}"
             git push origin "$NEW_TAG"
 
