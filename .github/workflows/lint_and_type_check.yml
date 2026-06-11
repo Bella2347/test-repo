@@ -3,6 +3,7 @@ name: Lint & Type Check
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened]
 
 concurrency:
   group: lint-and-type-check-pr-${{ github.event.pull_request.number }}
