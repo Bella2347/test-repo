@@ -1,19 +1,15 @@
 name: Format Python
 
 on:
-  workflow_run:
-    workflows: ["Lint & Type Check", "Run Pytest"]
-    types: [completed]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   format:
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'pull_request'
-
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ github.head_ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -36,8 +32,8 @@ jobs:
       - name: Get PR base/head SHAs
         id: pr
         run: |
-          echo "base=${{ github.event.workflow_run.pull_requests[0].base.sha }}" >> $GITHUB_OUTPUT
-          echo "head=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          echo "base=${{ github.event.pull_request.base.sha }}"
+          echo "head=${{ github.event.pull_request.head.sha }}"
 
       - name: Get changed Python files
         id: files
@@ -70,7 +66,7 @@ jobs:
             xargs -a changed_files.txt git add
 
             git commit -m "Apply Ruff formatting"
-            git push origin HEAD:${{ github.event.workflow_run.head_branch }}
+            git push origin HEAD:${{ github.head_ref }}
           else
             echo "No formatting changes needed"
           fi
