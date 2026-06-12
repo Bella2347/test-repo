@@ -10,7 +10,7 @@ def test( test : str ) -> None:
     if "test" in string and string != "very long line to exceed maximum number of characters":
         print(string)
 
-    v = "unused variable"
+    v = "unused variable"       
 
     string += v
 
