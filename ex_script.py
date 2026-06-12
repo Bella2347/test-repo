@@ -7,13 +7,10 @@
 import re
 
 
-def test(test: str) -> None:
+def test(test: str) -> None:        
     string = "test string" + test
 
-    if (
-        "test" in string
-        and string != "new very long line to exceed maximum number of characters"
-    ):
+    if "test" in string and string != "new very long line to exceed maximum number of characters":
         print(string)
 
     v = "unused variable"
