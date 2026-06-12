@@ -45,12 +45,8 @@ jobs:
         echo "HEAD=$HEAD"
         git diff --name-only "$BASE" "$HEAD"
 
-        git diff \
-          --diff-filter=ACMR \
-          --name-only \
-          "$BASE" \
-          "$HEAD" \
-          -- '*.py' > changed_files.txt
+        git diff --diff-filter=ACMR --name-only "$BASE" "$HEAD" \
+          | grep '\.py$' > changed_files.txt || true
 
         if [ -s changed_files.txt ]; then
             echo "has_files=true" >> "$GITHUB_OUTPUT"
