@@ -57,7 +57,12 @@ jobs:
     - name: Ruff check
       if: steps.files.outputs.has_files == 'true'
       run: |
-        xargs -a changed_files.txt ruff check --output-format=github
+        echo "Files passed to Ruff:"
+        cat changed_files.txt
+
+        while read -r file; do
+          ruff check "$file" --output-format=github
+        done < changed_files.txt
 
     - name: Mypy
       if: steps.files.outputs.has_files == 'true'
