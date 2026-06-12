@@ -38,12 +38,12 @@ jobs:
         git fetch origin "${{ github.event.pull_request.base.ref }}"
         git fetch origin "${{ github.event.pull_request.head.ref }}"
 
+        BASE="${{ github.event.pull_request.base.sha }}"
+        HEAD="origin/${{ github.event.pull_request.head.ref }}"
+
         echo "BASE=$BASE"
         echo "HEAD=$HEAD"
         git diff --name-only "$BASE" "$HEAD"
-
-        BASE="${{ github.event.pull_request.base.sha }}"
-        HEAD="origin/${{ github.event.pull_request.head.ref }}"
 
         git diff \
           --diff-filter=ACMR \
